@@ -729,6 +729,17 @@ have completed before cleanup.  Waits up to 5 seconds."
                     :type 'user-error)
     (claude-code-ide-tests--clear-processes)))
 
+(ert-deftest claude-code-ide-test-select-option-no-session ()
+  "Test select-option commands when no session exists."
+  (claude-code-ide-tests--clear-processes)
+  (unwind-protect
+      (progn
+        (should-error (claude-code-ide-select-option-1) :type 'user-error)
+        (should-error (claude-code-ide-select-option-2) :type 'user-error)
+        (should-error (claude-code-ide-select-option-3) :type 'user-error)
+        (should-error (claude-code-ide-select-option-4) :type 'user-error))
+    (claude-code-ide-tests--clear-processes)))
+
 (ert-deftest claude-code-ide-test-toggle-window-functionality ()
   "Test that running claude-code-ide on an existing session toggles the window."
   (skip-unless nil) ; Skip this test for now
