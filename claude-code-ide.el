@@ -480,6 +480,17 @@ cursor management, and process buffering for superior user experience."
    (t
     (error "Unknown terminal backend: %s" claude-code-ide-terminal-backend))))
 
+(defun claude-code-ide--terminal-send-down ()
+  "Send down arrow key to the terminal in the current buffer."
+  (cond
+   ((eq claude-code-ide-terminal-backend 'vterm)
+    (vterm-send-key "<down>"))
+   ((eq claude-code-ide-terminal-backend 'eat)
+    (when eat-terminal
+      (eat-term-send-string eat-terminal "\e[B")))
+   (t
+    (error "Unknown terminal backend: %s" claude-code-ide-terminal-backend))))
+
 (defun claude-code-ide--sync-terminal-dimensions (buffer window)
   "Sync terminal dimensions in BUFFER to match WINDOW size.
 This ensures the terminal process has the correct dimensions after
@@ -1167,6 +1178,62 @@ This simulates typing backslash followed by Enter, which Claude Code interprets 
           (claude-code-ide--terminal-send-string "\\")
           ;; Small delay to ensure prompt text is processed before sending return
           (sit-for 0.1)
+          (claude-code-ide--terminal-send-return))
+      (user-error "No Claude Code session for this project"))))
+
+;;;###autoload
+(defun claude-code-ide-select-option-1 ()
+  "Select the first option in Claude Code by sending return.
+This sends RET to confirm the currently highlighted option."
+  (interactive)
+  (let ((buffer-name (claude-code-ide--get-buffer-name)))
+    (if-let ((buffer (get-buffer buffer-name)))
+        (with-current-buffer buffer
+          (claude-code-ide--terminal-send-return))
+      (user-error "No Claude Code session for this project"))))
+
+;;;###autoload
+(defun claude-code-ide-select-option-2 ()
+  "Select the second option in Claude Code.
+This sends down arrow followed by return."
+  (interactive)
+  (let ((buffer-name (claude-code-ide--get-buffer-name)))
+    (if-let ((buffer (get-buffer buffer-name)))
+        (with-current-buffer buffer
+          (claude-code-ide--terminal-send-down)
+          (sit-for 0.05)
+          (claude-code-ide--terminal-send-return))
+      (user-error "No Claude Code session for this project"))))
+
+;;;###autoload
+(defun claude-code-ide-select-option-3 ()
+  "Select the third option in Claude Code.
+This sends two down arrows followed by return."
+  (interactive)
+  (let ((buffer-name (claude-code-ide--get-buffer-name)))
+    (if-let ((buffer (get-buffer buffer-name)))
+        (with-current-buffer buffer
+          (claude-code-ide--terminal-send-down)
+          (sit-for 0.05)
+          (claude-code-ide--terminal-send-down)
+          (sit-for 0.05)
+          (claude-code-ide--terminal-send-return))
+      (user-error "No Claude Code session for this project"))))
+
+;;;###autoload
+(defun claude-code-ide-select-option-4 ()
+  "Select the fourth option in Claude Code.
+This sends three down arrows followed by return."
+  (interactive)
+  (let ((buffer-name (claude-code-ide--get-buffer-name)))
+    (if-let ((buffer (get-buffer buffer-name)))
+        (with-current-buffer buffer
+          (claude-code-ide--terminal-send-down)
+          (sit-for 0.05)
+          (claude-code-ide--terminal-send-down)
+          (sit-for 0.05)
+          (claude-code-ide--terminal-send-down)
+          (sit-for 0.05)
           (claude-code-ide--terminal-send-return))
       (user-error "No Claude Code session for this project"))))
 

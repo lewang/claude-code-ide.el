@@ -41,6 +41,10 @@
 (declare-function claude-code-ide-send-prompt "claude-code-ide" ())
 (declare-function claude-code-ide-send-escape "claude-code-ide" ())
 (declare-function claude-code-ide-insert-newline "claude-code-ide" ())
+(declare-function claude-code-ide-select-option-1 "claude-code-ide" ())
+(declare-function claude-code-ide-select-option-2 "claude-code-ide" ())
+(declare-function claude-code-ide-select-option-3 "claude-code-ide" ())
+(declare-function claude-code-ide-select-option-4 "claude-code-ide" ())
 (declare-function claude-code-ide-toggle "claude-code-ide" ())
 (declare-function claude-code-ide-check-status "claude-code-ide" ())
 (declare-function claude-code-ide--ensure-cli "claude-code-ide" ())
@@ -331,10 +335,19 @@ Otherwise, if multiple sessions exist, prompt for selection."
     ("i" "Insert selection" claude-code-ide-insert-at-mentioned)
     ("p" "Send prompt from minibuffer" claude-code-ide-send-prompt)
     ("e" "Send escape key" claude-code-ide-send-escape)
-    ("n" "Insert newline" claude-code-ide-insert-newline)]
+    ("n" "Newline / Select option" claude-code-ide-newline-menu)]
    ["Submenus"
     ("C" "Configuration" claude-code-ide-config-menu)
     ("d" "Debugging" claude-code-ide-debug-menu)]])
+
+(transient-define-prefix claude-code-ide-newline-menu ()
+  "Claude Code newline and option selection menu."
+  ["Newline / Select Option"
+   ("n" "Insert newline" claude-code-ide-insert-newline)
+   ("1" "Select option 1 (RET)" claude-code-ide-select-option-1)
+   ("2" "Select option 2 (down+RET)" claude-code-ide-select-option-2)
+   ("3" "Select option 3 (down*2+RET)" claude-code-ide-select-option-3)
+   ("4" "Select option 4 (down*3+RET)" claude-code-ide-select-option-4)])
 
 (transient-define-prefix claude-code-ide-config-menu ()
   "Claude Code configuration menu."
