@@ -333,7 +333,7 @@ Otherwise, if multiple sessions exist, prompt for selection."
     ("W" "Toggle recent window" claude-code-ide-toggle-recent)]
    ["Interaction"
     ("RET" "Send return" claude-code-ide-select-option-1)
-    ("C-]" "Send prompt" claude-code-ide-send-prompt)
+    ("]" "Send prompt" claude-code-ide-send-prompt)
     ("i" "Insert selection" claude-code-ide-insert-at-mentioned)
     ("e" "Send escape key" claude-code-ide-send-escape)
     ("n" "Newline / Select option" claude-code-ide-newline-menu)]
