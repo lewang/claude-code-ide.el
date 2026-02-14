@@ -1199,58 +1199,42 @@ This simulates typing backslash followed by Enter, which Claude Code interprets 
 
 ;;;###autoload
 (defun claude-code-ide-select-option-1 ()
-  "Select the first option in Claude Code by sending return.
-This sends RET to confirm the currently highlighted option."
+  "Select the first option in Claude Code by sending \"1\"."
   (interactive)
   (let ((buffer-name (claude-code-ide--get-buffer-name)))
     (if-let ((buffer (get-buffer buffer-name)))
         (with-current-buffer buffer
-          (claude-code-ide--terminal-send-return))
+          (claude-code-ide--terminal-send-string "1"))
       (user-error "No Claude Code session for this project"))))
 
 ;;;###autoload
 (defun claude-code-ide-select-option-2 ()
-  "Select the second option in Claude Code.
-This sends down arrow followed by return."
+  "Select the second option in Claude Code by sending \"2\"."
   (interactive)
   (let ((buffer-name (claude-code-ide--get-buffer-name)))
     (if-let ((buffer (get-buffer buffer-name)))
         (with-current-buffer buffer
-          (claude-code-ide--terminal-send-down)
-          (sit-for 0.05)
-          (claude-code-ide--terminal-send-return))
+          (claude-code-ide--terminal-send-string "2"))
       (user-error "No Claude Code session for this project"))))
 
 ;;;###autoload
 (defun claude-code-ide-select-option-3 ()
-  "Select the third option in Claude Code.
-This sends two down arrows followed by return."
+  "Select the third option in Claude Code by sending \"3\"."
   (interactive)
   (let ((buffer-name (claude-code-ide--get-buffer-name)))
     (if-let ((buffer (get-buffer buffer-name)))
         (with-current-buffer buffer
-          (claude-code-ide--terminal-send-down)
-          (sit-for 0.05)
-          (claude-code-ide--terminal-send-down)
-          (sit-for 0.05)
-          (claude-code-ide--terminal-send-return))
+          (claude-code-ide--terminal-send-string "3"))
       (user-error "No Claude Code session for this project"))))
 
 ;;;###autoload
 (defun claude-code-ide-select-option-4 ()
-  "Select the fourth option in Claude Code.
-This sends three down arrows followed by return."
+  "Select the fourth option in Claude Code by sending \"4\"."
   (interactive)
   (let ((buffer-name (claude-code-ide--get-buffer-name)))
     (if-let ((buffer (get-buffer buffer-name)))
         (with-current-buffer buffer
-          (claude-code-ide--terminal-send-down)
-          (sit-for 0.05)
-          (claude-code-ide--terminal-send-down)
-          (sit-for 0.05)
-          (claude-code-ide--terminal-send-down)
-          (sit-for 0.05)
-          (claude-code-ide--terminal-send-return))
+          (claude-code-ide--terminal-send-string "4"))
       (user-error "No Claude Code session for this project"))))
 
 ;;;###autoload

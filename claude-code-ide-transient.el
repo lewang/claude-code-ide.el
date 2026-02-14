@@ -335,15 +335,13 @@ Otherwise, if multiple sessions exist, prompt for selection."
     ("W" "Toggle recent window" claude-code-ide-toggle-recent)]
    ["Interaction"
     ("RET" "Send return" claude-code-ide-select-option-1)
-    ("]" "Send prompt" claude-code-ide-send-prompt)
-    ("i" "Insert selection" claude-code-ide-insert-at-mentioned)
-    ("e" "Send escape key" claude-code-ide-send-escape)
-    ("n" "Insert newline" claude-code-ide-insert-newline)]
+    ("i" "Send prompt" claude-code-ide-send-prompt)
+    ("e" "Send escape key" claude-code-ide-send-escape)]
    ["Select Option"
-    ("1" "Option 1 (RET)" claude-code-ide-select-option-1)
-    ("2" "Option 2 (down+RET)" claude-code-ide-select-option-2)
-    ("3" "Option 3 (down*2+RET)" claude-code-ide-select-option-3)
-    ("4" "Option 4 (down*3+RET)" claude-code-ide-select-option-4)]
+    ("1" "Option 1" claude-code-ide-select-option-1)
+    ("2" "Option 2" claude-code-ide-select-option-2)
+    ("3" "Option 3" claude-code-ide-select-option-3)
+    ("4" "Option 4" claude-code-ide-select-option-4)]
    ["Submenus"
     ("C" "Configuration" claude-code-ide-config-menu)
     ("d" "Debugging" claude-code-ide-debug-menu)]])
