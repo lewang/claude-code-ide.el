@@ -513,7 +513,7 @@ have completed before cleanup.  Waits up to 5 seconds."
         (cl-letf (((symbol-function 'claude-code-ide--build-claude-command)
                    (lambda (&rest _) "claude")))
           (let ((result (claude-code-ide--create-terminal-session
-                         "*test-vterm*" "/tmp" 12345 nil nil "test-session")))
+                         "*test-vterm*" "/tmp" 12345 "test-session")))
             (should (consp result))
             (should (bufferp (car result)))
             (should (processp (cdr result)))
@@ -525,7 +525,7 @@ have completed before cleanup.  Waits up to 5 seconds."
         (cl-letf (((symbol-function 'claude-code-ide--build-claude-command)
                    (lambda (&rest _) "claude")))
           (let ((result (claude-code-ide--create-terminal-session
-                         "*test-eat*" "/tmp" 12345 nil nil "test-session")))
+                         "*test-eat*" "/tmp" 12345 "test-session")))
             (should (consp result))
             (should (bufferp (car result)))
             (should (processp (cdr result)))
@@ -903,9 +903,20 @@ have completed before cleanup.  Waits up to 5 seconds."
 (ert-deftest claude-code-ide-test-debug-mode-flag ()
   "Test debug mode CLI flag."
   (let ((claude-code-ide-cli-debug t))
-    (should (string-match "-d" (claude-code-ide--build-claude-command)))
-    (should (string-match "-d.*-c" (claude-code-ide--build-claude-command t)))
-    (should (string-match "-d.*-r" (claude-code-ide--build-claude-command nil t)))))
+    (should (string-match "-d" (claude-code-ide--build-claude-command)))))
+
+(ert-deftest claude-code-ide-test-session-id-flag ()
+  "Test --session-id flag in built command."
+  (let ((claude-code-ide-cli-path "claude")
+        (claude-code-ide-cli-debug nil)
+        (claude-code-ide-cli-extra-flags "")
+        (claude-code-ide-system-prompt nil))
+    ;; Without session-id
+    (should-not (string-match-p "--session-id" (claude-code-ide--build-claude-command)))
+    ;; With session-id
+    (let ((cmd (claude-code-ide--build-claude-command "test-uuid-1234")))
+      (should (string-match-p "--session-id" cmd))
+      (should (string-match-p "test-uuid-1234" cmd)))))
 
 (ert-deftest claude-code-ide-test-build-command-with-system-prompt ()
   "Test building command with append-system-prompt flag."
