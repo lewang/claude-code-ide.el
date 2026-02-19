@@ -25,6 +25,8 @@ This package integrates Claude Code CLI with Emacs via WebSocket and the Model C
 **Modular MCP Tools (mcp-tools.d/):**
 - `claude-code-ide-tool-buffer-management.el` - Buffer operations (list, read, goto, reload)
 - `claude-code-ide-tool-eval.el` - Emacs Lisp evaluation (disabled by default, see Security section)
+- `claude-code-ide-tool-xref.el` - LSP-aware xref find-references
+- `claude-code-ide-tool-magit.el` - Magit status buffer refresh after git operations
 
 ## Hooks
 

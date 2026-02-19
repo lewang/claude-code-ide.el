@@ -436,7 +436,11 @@ If INCLUDE_CHILDREN is non-nil, include child nodes."
 
   ;; Load and register LSP-aware xref tool
   (require 'claude-code-ide-tool-xref)
-  (claude-code-ide-tool-xref-setup))
+  (claude-code-ide-tool-xref-setup)
+
+  ;; Load and register magit refresh tool
+  (require 'claude-code-ide-tool-magit)
+  (claude-code-ide-tool-magit-setup))
 
 ;;;###autoload
 (defun claude-code-ide-emacs-tools-restart ()

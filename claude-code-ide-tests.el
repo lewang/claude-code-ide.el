@@ -2547,6 +2547,80 @@ have completed before cleanup.  Waits up to 5 seconds."
       ;; Cleanup
       (claude-code-ide-mcp-server-unregister-session session-id))))
 
+;;; Magit Refresh Tool Tests
+
+(ert-deftest claude-code-ide-emacs-tools-test-magit-refresh-success ()
+  "Test magit refresh when magit is available and buffer exists."
+  (require 'claude-code-ide-emacs-tools)
+  (require 'claude-code-ide-tool-magit)
+
+  (let ((session-id "test-session-magit")
+        (project-dir (temporary-file-directory))
+        (refresh-called nil))
+    (unwind-protect
+        (progn
+          (claude-code-ide-mcp-server-register-session session-id project-dir nil)
+
+          (let ((claude-code-ide-mcp-server--current-session-id session-id)
+                (mock-buffer (generate-new-buffer " *test-magit-status*")))
+            (unwind-protect
+                (cl-letf (((symbol-function 'magit-get-mode-buffer)
+                           (lambda (_mode) mock-buffer))
+                          ((symbol-function 'magit-refresh-buffer)
+                           (lambda () (setq refresh-called t))))
+                  (let ((result (claude-code-ide-mcp-magit-refresh)))
+                    (should (stringp result))
+                    (should (string-match "Refreshed magit-status buffer" result))
+                    (should refresh-called)))
+              (kill-buffer mock-buffer))))
+
+      (claude-code-ide-mcp-server-unregister-session session-id))))
+
+(ert-deftest claude-code-ide-emacs-tools-test-magit-not-available ()
+  "Test magit refresh when magit is not installed."
+  (require 'claude-code-ide-emacs-tools)
+  (require 'claude-code-ide-tool-magit)
+
+  (let ((session-id "test-session-magit-na")
+        (project-dir (temporary-file-directory)))
+    (unwind-protect
+        (progn
+          (claude-code-ide-mcp-server-register-session session-id project-dir nil)
+
+          (let ((claude-code-ide-mcp-server--current-session-id session-id))
+            (cl-letf (((symbol-function 'magit-get-mode-buffer)
+                       nil))
+              ;; Unbind the function to simulate magit not being installed
+              (fmakunbound 'magit-get-mode-buffer)
+              (unwind-protect
+                  (let ((result (claude-code-ide-mcp-magit-refresh)))
+                    (should (stringp result))
+                    (should (string-match "not installed" result)))
+                ;; Restore mock for other tests
+                (fset 'magit-get-mode-buffer (lambda (_mode) nil))))))
+
+      (claude-code-ide-mcp-server-unregister-session session-id))))
+
+(ert-deftest claude-code-ide-emacs-tools-test-magit-no-buffer ()
+  "Test magit refresh when no magit-status buffer is open."
+  (require 'claude-code-ide-emacs-tools)
+  (require 'claude-code-ide-tool-magit)
+
+  (let ((session-id "test-session-magit-nb")
+        (project-dir (temporary-file-directory)))
+    (unwind-protect
+        (progn
+          (claude-code-ide-mcp-server-register-session session-id project-dir nil)
+
+          (let ((claude-code-ide-mcp-server--current-session-id session-id))
+            (cl-letf (((symbol-function 'magit-get-mode-buffer)
+                       (lambda (_mode) nil)))
+              (let ((result (claude-code-ide-mcp-magit-refresh)))
+                (should (stringp result))
+                (should (string-match "No magit-status buffer open" result))))))
+
+      (claude-code-ide-mcp-server-unregister-session session-id))))
+
 (provide 'claude-code-ide-tests)
 
 ;; Local Variables:
