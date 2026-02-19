@@ -35,19 +35,24 @@
 
 (defun claude-code-ide-mcp-magit-refresh ()
   "Refresh the Magit status buffer for the current session's project.
-Uses session context to determine the project directory, then finds
-and refreshes the corresponding magit-status buffer if one exists."
+Uses session context to determine the project directory, then schedules
+an asynchronous refresh of the corresponding magit-status buffer.
+Returns immediately so Claude Code is not blocked."
   (claude-code-ide-mcp-server-with-session-context nil
     (cond
      ((not (fboundp 'magit-get-mode-buffer))
       "Magit is not installed or not loaded")
      (t
-      (let ((buf (magit-get-mode-buffer 'magit-status-mode)))
+      (let ((buf (magit-get-mode-buffer 'magit-status-mode))
+            (dir default-directory))
         (if (not buf)
-            (format "No magit-status buffer open for %s" default-directory)
-          (with-current-buffer buf
-            (magit-refresh-buffer))
-          (format "Refreshed magit-status buffer for %s" default-directory)))))))
+            (format "No magit-status buffer open for %s" dir)
+          (run-at-time 0 nil
+                       (lambda ()
+                         (when (buffer-live-p buf)
+                           (with-current-buffer buf
+                             (magit-refresh-buffer)))))
+          (format "Scheduled magit-status refresh for %s" dir)))))))
 
 ;;; Tool Registration
 

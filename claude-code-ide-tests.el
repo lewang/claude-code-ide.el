@@ -2550,13 +2550,13 @@ have completed before cleanup.  Waits up to 5 seconds."
 ;;; Magit Refresh Tool Tests
 
 (ert-deftest claude-code-ide-emacs-tools-test-magit-refresh-success ()
-  "Test magit refresh when magit is available and buffer exists."
+  "Test magit refresh schedules async refresh when buffer exists."
   (require 'claude-code-ide-emacs-tools)
   (require 'claude-code-ide-tool-magit)
 
   (let ((session-id "test-session-magit")
         (project-dir (temporary-file-directory))
-        (refresh-called nil))
+        (timer-scheduled nil))
     (unwind-protect
         (progn
           (claude-code-ide-mcp-server-register-session session-id project-dir nil)
@@ -2566,12 +2566,12 @@ have completed before cleanup.  Waits up to 5 seconds."
             (unwind-protect
                 (cl-letf (((symbol-function 'magit-get-mode-buffer)
                            (lambda (_mode) mock-buffer))
-                          ((symbol-function 'magit-refresh-buffer)
-                           (lambda () (setq refresh-called t))))
+                          ((symbol-function 'run-at-time)
+                           (lambda (_time _repeat fn) (setq timer-scheduled fn) nil)))
                   (let ((result (claude-code-ide-mcp-magit-refresh)))
                     (should (stringp result))
-                    (should (string-match "Refreshed magit-status buffer" result))
-                    (should refresh-called)))
+                    (should (string-match "Scheduled magit-status refresh" result))
+                    (should timer-scheduled)))
               (kill-buffer mock-buffer))))
 
       (claude-code-ide-mcp-server-unregister-session session-id))))
