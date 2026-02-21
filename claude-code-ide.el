@@ -1291,10 +1291,10 @@ If no Claude windows are visible, show the most recently accessed one."
 (defun claude-code-ide-bookmark-make-record ()
   "Create a bookmark record for a claude-code-ide buffer."
   `(,(buffer-name)
-    (handler . claude-code-ide-bookmark-handler)
+    (handler . claude-code-ide-bookmark-jump)
     (project-dir . ,(claude-code-ide--get-working-directory))))
 
-(defun claude-code-ide-bookmark-handler (bookmark)
+(defun claude-code-ide-bookmark-jump (bookmark)
   "Restore a claude-code-ide session from BOOKMARK."
   (let* ((project-dir (bookmark-prop-get bookmark 'project-dir))
          (default-directory project-dir)
@@ -1304,6 +1304,8 @@ If no Claude windows are visible, show the most recently accessed one."
         (set-buffer existing-buffer)
       (claude-code-ide--start-session)
       (set-buffer (get-buffer (claude-code-ide--get-buffer-name project-dir))))))
+
+(put 'claude-code-ide-bookmark-jump 'bookmark-handler-type "ClaudIde")
 
 (provide 'claude-code-ide)
 
