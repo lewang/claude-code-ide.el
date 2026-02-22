@@ -266,6 +266,22 @@ a more stable viewing experience when working with multiple windows."
   :type 'boolean
   :group 'claude-code-ide)
 
+(defcustom claude-code-ide-parent-session-predicate nil
+  "Predicate to determine if a project should fall back to parent session.
+When non-nil, this function is called with the detected project
+directory (expanded, trailing slash).  If it returns non-nil and
+no session exists for that directory, Claude Code IDE resolves
+the parent directory's project instead.
+
+Example: fall back for .le-playground worktrees:
+  (setq claude-code-ide-parent-session-predicate
+        (lambda (dir)
+          (string= \".le-playground\"
+                   (file-name-nondirectory (directory-file-name dir)))))"
+  :type '(choice (const :tag "Disabled" nil)
+                 function)
+  :group 'claude-code-ide)
+
 (define-obsolete-variable-alias
   'claude-code-ide-eat-initialization-delay
   'claude-code-ide-terminal-initialization-delay
@@ -595,14 +611,35 @@ width has actually changed, working around the scrolling glitch."
   (format "*claude-code[%s]*"
           (file-name-nondirectory (directory-file-name directory))))
 
+(defun claude-code-ide--resolve-parent-project (dir)
+  "Resolve parent project root for DIR.
+Go up one level from DIR and find the enclosing project."
+  (let* ((parent (file-name-directory (directory-file-name dir)))
+         (default-directory parent))
+    (if-let ((project (project-current)))
+        (expand-file-name (project-root project))
+      (expand-file-name parent))))
+
+(defun claude-code-ide--maybe-resolve-parent (dir session-exists-p)
+  "If DIR matches the parent-session predicate and SESSION-EXISTS-P is nil, resolve parent.
+Returns DIR unchanged if no fallback is needed."
+  (if (and dir
+           claude-code-ide-parent-session-predicate
+           (funcall claude-code-ide-parent-session-predicate dir)
+           (not session-exists-p))
+      (claude-code-ide--resolve-parent-project dir)
+    dir))
+
 (defun claude-code-ide--get-working-directory (&optional force-default-directory)
   "Get the current working directory (project root or current directory).
 When FORCE-DEFAULT-DIRECTORY is non-nil, use `default-directory' directly."
   (if force-default-directory
       (expand-file-name default-directory)
-    (if-let ((project (project-current)))
-        (expand-file-name (project-root project))
-      (expand-file-name default-directory))))
+    (let ((dir (if-let ((project (project-current)))
+                   (expand-file-name (project-root project))
+                 (expand-file-name default-directory))))
+      (claude-code-ide--maybe-resolve-parent
+       dir (claude-code-ide--get-process dir)))))
 
 (defun claude-code-ide--get-buffer-name (&optional directory)
   "Get the buffer name for the Claude Code session in DIRECTORY.

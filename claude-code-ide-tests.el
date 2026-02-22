@@ -258,6 +258,44 @@ have completed before cleanup.  Waits up to 5 seconds."
      (let ((expected (expand-file-name default-directory)))
        (should (equal (claude-code-ide--get-working-directory) expected))))))
 
+(ert-deftest claude-code-ide-test-maybe-resolve-parent-nil-predicate ()
+  "Test that nil predicate means no fallback."
+  (let ((claude-code-ide-parent-session-predicate nil))
+    (should (equal "/tmp/sub/"
+                   (claude-code-ide--maybe-resolve-parent "/tmp/sub/" nil)))))
+
+(ert-deftest claude-code-ide-test-maybe-resolve-parent-matching ()
+  "Test that matching predicate with no session resolves parent."
+  (let ((claude-code-ide-parent-session-predicate
+         (lambda (dir)
+           (string= ".le-playground"
+                    (file-name-nondirectory (directory-file-name dir))))))
+    (cl-letf (((symbol-function 'claude-code-ide--resolve-parent-project)
+               (lambda (_dir) "/tmp/parent/")))
+      (should (equal "/tmp/parent/"
+                     (claude-code-ide--maybe-resolve-parent
+                      "/tmp/parent/.le-playground/" nil))))))
+
+(ert-deftest claude-code-ide-test-maybe-resolve-parent-session-exists ()
+  "Test that matching predicate with existing session stays."
+  (let ((claude-code-ide-parent-session-predicate
+         (lambda (dir)
+           (string= ".le-playground"
+                    (file-name-nondirectory (directory-file-name dir))))))
+    (should (equal "/tmp/parent/.le-playground/"
+                   (claude-code-ide--maybe-resolve-parent
+                    "/tmp/parent/.le-playground/" t)))))
+
+(ert-deftest claude-code-ide-test-maybe-resolve-parent-no-match ()
+  "Test that non-matching predicate stays."
+  (let ((claude-code-ide-parent-session-predicate
+         (lambda (dir)
+           (string= ".le-playground"
+                    (file-name-nondirectory (directory-file-name dir))))))
+    (should (equal "/tmp/some-project/"
+                   (claude-code-ide--maybe-resolve-parent
+                    "/tmp/some-project/" nil)))))
+
 (ert-deftest claude-code-ide-test-get-buffer-name ()
   "Test buffer name generation using custom function."
   ;; Test with custom function
