@@ -78,6 +78,7 @@
 (declare-function vterm-send-string "vterm" (string))
 (declare-function vterm-send-escape "vterm" ())
 (declare-function vterm-send-return "vterm" ())
+(declare-function vterm-send-key "vterm" (key &optional shift meta ctrl accept))
 (declare-function vterm--window-adjust-process-window-size "vterm" (&optional frame))
 
 ;; External function declarations for eat
@@ -86,6 +87,8 @@
 (declare-function eat-term-send-string "eat" (terminal string))
 (declare-function eat-term-display-cursor "eat" (terminal))
 (declare-function eat--adjust-process-window-size "eat" (process windows))
+
+(require 'org-id)
 
 ;;; Customization
 
@@ -1001,7 +1004,7 @@ This function handles:
       (claude-code-ide--terminal-ensure-backend)
       ;; Start MCP server with project directory
       (let ((port nil)
-            (session-id (progn (require 'org-id) (org-id-uuid))))
+            (session-id (org-id-uuid)))
         (condition-case err
             (progn
               ;; Start MCP server

@@ -51,6 +51,8 @@
 (require 'project)
 (require 'url-parse)
 (require 'claude-code-ide-debug)
+
+(declare-function claude-code-ide--maybe-resolve-parent "claude-code-ide" (dir session-exists-p))
 (require 'claude-code-ide-mcp-handlers)
 (require 'claude-code-ide-mcp-server)
 

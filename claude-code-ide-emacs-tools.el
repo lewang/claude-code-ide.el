@@ -46,6 +46,11 @@
                          default-directory)))))
     (add-to-list 'load-path tools-dir)))
 
+(require 'claude-code-ide-tool-buffer-management)
+(require 'claude-code-ide-tool-eval)
+(require 'claude-code-ide-tool-xref)
+(require 'claude-code-ide-tool-magit)
+
 ;; Tree-sitter declarations
 (declare-function treesit-node-at "treesit" (pos &optional parser-or-lang named))
 (declare-function treesit-node-text "treesit" (node &optional no-property))
@@ -424,22 +429,18 @@ If INCLUDE_CHILDREN is non-nil, include child nodes."
                   :description "Include child nodes"
                   :optional t)))
 
-  ;; Load and register buffer management tools
-  (require 'claude-code-ide-tool-buffer-management)
+  ;; Register buffer management tools
   (claude-code-ide-tool-buffer-management-setup)
 
-  ;; Load and register eval tool (OPTIONAL - disabled by default for security)
+  ;; Register eval tool (OPTIONAL - disabled by default for security)
   ;; Enable by setting: (setq claude-code-ide-eval-enabled t)
   ;; Or interactively: M-x claude-code-ide-eval-toggle
-  (require 'claude-code-ide-tool-eval)
   (claude-code-ide-tool-eval-setup)
 
-  ;; Load and register LSP-aware xref tool
-  (require 'claude-code-ide-tool-xref)
+  ;; Register LSP-aware xref tool
   (claude-code-ide-tool-xref-setup)
 
-  ;; Load and register magit refresh tool
-  (require 'claude-code-ide-tool-magit)
+  ;; Register magit refresh tool
   (claude-code-ide-tool-magit-setup))
 
 ;;;###autoload
