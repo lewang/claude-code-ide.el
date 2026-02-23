@@ -54,7 +54,7 @@
   "Get current session context for logging."
   (if claude-code-ide-log-with-context
       (format "[%s]" (or (ignore-errors
-                           (when-let ((proj (project-current)))
+                           (when-let* ((proj (project-current)))
                              (file-name-nondirectory
                               (directory-file-name
                                (project-root proj)))))
