@@ -57,7 +57,7 @@
 (require 'claude-code-ide-mcp-server)
 
 ;; External declarations
-(defvar claude-code-ide--session-ids)
+(defvar claude-code-ide--routing-tokens)
 (declare-function claude-code-ide-mcp--build-tool-list "claude-code-ide-mcp-handlers" ())
 (declare-function claude-code-ide-mcp--build-tool-schemas "claude-code-ide-mcp-handlers" ())
 (declare-function claude-code-ide-mcp--build-tool-descriptions "claude-code-ide-mcp-handlers" ())
@@ -436,15 +436,15 @@ Optional SESSION contains the MCP session context."
                           (claude-code-ide-mcp-session-client session)
                         ;; Fallback: try to find session from current buffer using cache
                         (when-let* ((s (or (when (and claude-code-ide-mcp--buffer-cache-valid
-                                                     claude-code-ide-mcp--buffer-session-cache)
-                                            claude-code-ide-mcp--buffer-session-cache)
-                                          (when-let* ((project-dir (claude-code-ide-mcp--get-buffer-project))
-                                                      (found-session (claude-code-ide-mcp--get-session-for-project project-dir)))
-                                            ;; Cache the session (only cache non-nil values)
-                                            (when found-session
-                                              (setq claude-code-ide-mcp--buffer-session-cache found-session
-                                                    claude-code-ide-mcp--buffer-cache-valid t))
-                                            found-session))))
+                                                      claude-code-ide-mcp--buffer-session-cache)
+                                             claude-code-ide-mcp--buffer-session-cache)
+                                           (when-let* ((project-dir (claude-code-ide-mcp--get-buffer-project))
+                                                       (found-session (claude-code-ide-mcp--get-session-for-project project-dir)))
+                                             ;; Cache the session (only cache non-nil values)
+                                             (when found-session
+                                               (setq claude-code-ide-mcp--buffer-session-cache found-session
+                                                     claude-code-ide-mcp--buffer-cache-valid t))
+                                             found-session))))
                           (claude-code-ide-mcp-session-client s)))))
           (if client
               (let ((response-text (json-encode response)))
@@ -565,7 +565,7 @@ Optional SESSION contains the MCP session context."
                                         (expand-file-name file-path)))
               (setf (claude-code-ide-mcp-session-last-buffer session) (current-buffer))
               ;; Update MCP tools server's last active buffer
-              (when-let* ((session-id (gethash project-dir claude-code-ide--session-ids)))
+              (when-let* ((session-id (gethash project-dir claude-code-ide--routing-tokens)))
                 (claude-code-ide-mcp-server-update-last-active-buffer session-id (current-buffer)))
               (run-at-time claude-code-ide-mcp-initial-notification-delay nil
                            (lambda ()
@@ -800,7 +800,7 @@ This should be called when the buffer's context might have changed."
                                         (expand-file-name file-path)))
               (setf (claude-code-ide-mcp-session-last-buffer session) current-buffer)
               ;; Update MCP tools server's last active buffer
-              (when-let* ((session-id (gethash project-dir claude-code-ide--session-ids)))
+              (when-let* ((session-id (gethash project-dir claude-code-ide--routing-tokens)))
                 (claude-code-ide-mcp-server-update-last-active-buffer session-id current-buffer))
               ;; Send notification
               (claude-code-ide-mcp--send-notification

@@ -44,6 +44,8 @@
 ;;
 ;; Usage:
 ;; M-x claude-code-ide - Start Claude Code for current project
+;; M-x claude-code-ide-continue - Continue most recent conversation in directory
+;; M-x claude-code-ide-resume - Resume Claude Code with previous conversation
 ;; M-x claude-code-ide-stop - Stop Claude Code for current project
 ;; M-x claude-code-ide-switch-to-buffer - Switch to project's Claude buffer
 ;; M-x claude-code-ide-list-sessions - List and switch between all sessions
@@ -303,14 +305,14 @@ Example: fall back for .le-playground worktrees:
 (defvar claude-code-ide--processes (make-hash-table :test 'equal)
   "Hash table mapping project/directory roots to their Claude Code processes.")
 
-(defvar claude-code-ide--session-ids (make-hash-table :test 'equal)
-  "Hash table mapping project/directory roots to their session IDs.")
+(defvar claude-code-ide--routing-tokens (make-hash-table :test 'equal)
+  "Hash table mapping project/directory roots to their MCP routing tokens.")
 
 (defvar claude-code-ide--last-accessed-buffer nil
   "The most recently accessed Claude Code buffer.")
 
-(defvar-local claude-code-ide--session-id nil
-  "Session ID (UUID) for the Claude Code session in this buffer.")
+(defvar-local claude-code-ide--routing-token nil
+  "Routing token (UUID) for MCP tool routing in this buffer.")
 
 ;;; Vterm Rendering Optimization
 
@@ -751,12 +753,12 @@ If `claude-code-ide-focus-on-open' is non-nil, the window is selected."
             (advice-remove 'vterm--filter #'claude-code-ide--vterm-smart-renderer))
           ;; Stop MCP server for this project directory
           (claude-code-ide-mcp-stop-session directory)
-          ;; Notify MCP tools server about session end with session ID
-          (let ((session-id (gethash directory claude-code-ide--session-ids)))
-            (claude-code-ide-mcp-server-session-ended session-id)
-            ;; Clean up session ID mapping
-            (when session-id
-              (remhash directory claude-code-ide--session-ids)))
+          ;; Notify MCP tools server about session end with routing token
+          (let ((routing-token (gethash directory claude-code-ide--routing-tokens)))
+            (claude-code-ide-mcp-server-session-ended routing-token)
+            ;; Clean up routing token mapping
+            (when routing-token
+              (remhash directory claude-code-ide--routing-tokens)))
           ;; Kill the vterm buffer if it exists
           (let ((buffer-name (claude-code-ide--get-buffer-name directory)))
             (when-let* ((buffer (get-buffer buffer-name)))
@@ -806,9 +808,11 @@ If the window is not visible, it will be shown in a side window."
             (setf (claude-code-ide-mcp-session-original-tab session) (tab-bar--current-tab))))
         (claude-code-ide-debug "Claude Code window shown")))))
 
-(defun claude-code-ide--build-claude-command (&optional session-id)
+(defun claude-code-ide--build-claude-command (&optional continue resume routing-token)
   "Build the Claude command with optional flags.
-If SESSION-ID is provided, add --session-id flag and include it in MCP server URL.
+If CONTINUE is non-nil, add the -c flag.
+If RESUME is non-nil, add the -r flag.
+ROUTING-TOKEN is included in the MCP server URL path (not passed to CLI).
 If `claude-code-ide-cli-debug' is non-nil, add the -d flag.
 If `claude-code-ide-system-prompt' is non-nil, add the --append-system-prompt flag.
 Additional flags from `claude-code-ide-cli-extra-flags' are also included."
@@ -816,9 +820,12 @@ Additional flags from `claude-code-ide-cli-extra-flags' are also included."
     ;; Add debug flag if enabled
     (when claude-code-ide-cli-debug
       (setq claude-cmd (concat claude-cmd " -d")))
-    ;; Add session-id flag if provided
-    (when session-id
-      (setq claude-cmd (concat claude-cmd " --session-id " (shell-quote-argument session-id))))
+    ;; Add resume flag if requested
+    (when resume
+      (setq claude-cmd (concat claude-cmd " -r")))
+    ;; Add continue flag if requested
+    (when continue
+      (setq claude-cmd (concat claude-cmd " -c")))
     ;; Add append-system-prompt flag with Emacs context
     (let ((emacs-prompt "IMPORTANT: Connected to Emacs via claude-code-ide.el integration. Emacs uses mixed coordinates: Lines: 1-based (line 1 = first line), Columns: 0-based (column 0 = first column). Example: First character in file is at line 1, column 0. Available: xref (LSP), tree-sitter, imenu, project.el, flycheck/flymake diagnostics. Context-aware with automatic project/file/selection tracking.")
           (combined-prompt nil))
@@ -836,7 +843,7 @@ Additional flags from `claude-code-ide-cli-extra-flags' are also included."
       (setq claude-cmd (concat claude-cmd " " claude-code-ide-cli-extra-flags)))
     ;; Add MCP tools config if enabled
     (when (claude-code-ide-mcp-server-ensure-server)
-      (when-let* ((config (claude-code-ide-mcp-server-get-config session-id)))
+      (when-let* ((config (claude-code-ide-mcp-server-get-config routing-token)))
         (let ((json-str (json-encode config)))
           (claude-code-ide-debug "MCP tools config JSON: %s" json-str)
           ;; For vterm, we need to escape for sh -c context
@@ -895,28 +902,32 @@ and args is a list of arguments."
     (cons (car parts) (cdr parts))))
 
 
-(defun claude-code-ide--create-terminal-session (buffer-name working-dir port session-id)
+(defun claude-code-ide--create-terminal-session (buffer-name working-dir port
+                                                             continue resume routing-token)
   "Create a new terminal session for Claude Code.
 BUFFER-NAME is the name for the terminal buffer.
 WORKING-DIR is the working directory.
 PORT is the MCP server port.
-SESSION-ID is the unique identifier for this session.
+CONTINUE is whether to continue the most recent conversation.
+RESUME is whether to resume a previous conversation.
+ROUTING-TOKEN is the unique routing token for MCP tool routing.
 
 Returns a cons cell of (buffer . process) on success.
 Signals an error if terminal fails to initialize."
   ;; Ensure terminal backend is available before proceeding
   (claude-code-ide--terminal-ensure-backend)
-  (let* ((claude-cmd (claude-code-ide--build-claude-command session-id))
+  (let* ((claude-cmd (claude-code-ide--build-claude-command continue resume routing-token))
          (default-directory working-dir)
          (env-vars (list (format "CLAUDE_CODE_SSE_PORT=%d" port)
                          "ENABLE_IDE_INTEGRATION=true"
                          "TERM_PROGRAM=emacs"
-                         "FORCE_CODE_TERMINAL=true")))
+                         "FORCE_CODE_TERMINAL=true"
+                         (format "CLAUDE_CODE_IDE_TOKEN=%s" routing-token))))
     ;; Log the command for debugging
     (claude-code-ide-debug "Starting Claude with command: %s" claude-cmd)
     (claude-code-ide-debug "Working directory: %s" working-dir)
     (claude-code-ide-debug "Environment: CLAUDE_CODE_SSE_PORT=%d" port)
-    (claude-code-ide-debug "Session ID: %s" session-id)
+    (claude-code-ide-debug "Routing token: %s" routing-token)
     (claude-code-ide-debug "Terminal backend: %s" claude-code-ide-terminal-backend)
 
     (cond
@@ -974,8 +985,10 @@ Signals an error if terminal fails to initialize."
      (t
       (error "Unknown terminal backend: %s" claude-code-ide-terminal-backend)))))
 
-(defun claude-code-ide--start-session (&optional force-dir)
+(defun claude-code-ide--start-session (&optional continue resume force-dir)
   "Start a Claude Code session for the current project.
+If CONTINUE is non-nil, start Claude with the -c (continue) flag.
+If RESUME is non-nil, start Claude with the -r (resume) flag.
 If FORCE-DIR is non-nil, use `default-directory' instead of project root.
 
 This function handles:
@@ -1004,21 +1017,22 @@ This function handles:
       (claude-code-ide--terminal-ensure-backend)
       ;; Start MCP server with project directory
       (let ((port nil)
-            (session-id (org-id-uuid)))
+            (routing-token (org-id-uuid)))
         (condition-case err
             (progn
               ;; Start MCP server
               (setq port (claude-code-ide-mcp-start working-dir))
               ;; Create new terminal session
               (let* ((buffer-and-process (claude-code-ide--create-terminal-session
-                                          buffer-name working-dir port session-id))
+                                          buffer-name working-dir port
+                                          continue resume routing-token))
                      (buffer (car buffer-and-process))
                      (process (cdr buffer-and-process)))
-                ;; Notify MCP tools server about new session with session info
-                (claude-code-ide-mcp-server-session-started session-id working-dir buffer)
+                ;; Notify MCP tools server about new session with routing token
+                (claude-code-ide-mcp-server-session-started routing-token working-dir buffer)
                 (claude-code-ide--set-process process working-dir)
-                ;; Store session ID for cleanup
-                (puthash working-dir session-id claude-code-ide--session-ids)
+                ;; Store routing token for cleanup
+                (puthash working-dir routing-token claude-code-ide--routing-tokens)
                 ;; Set up process sentinel to clean up when Claude exits
                 (set-process-sentinel process
                                       (lambda (_proc event)
@@ -1039,8 +1053,8 @@ This function handles:
                             (lambda ()
                               (claude-code-ide--cleanup-on-exit working-dir))
                             nil t)
-                  ;; Store session ID in buffer
-                  (setq-local claude-code-ide--session-id session-id)
+                  ;; Store routing token in buffer
+                  (setq-local claude-code-ide--routing-token routing-token)
                   ;; Set up terminal keybindings
                   (claude-code-ide--setup-terminal-keybindings)
                   ;; Enable bookmark support
@@ -1063,7 +1077,10 @@ This function handles:
                 (sleep-for claude-code-ide-terminal-initialization-delay)
                 ;; Display the buffer in a side window
                 (claude-code-ide--display-buffer-in-side-window buffer)
-                (claude-code-ide-log "Claude Code started in %s with MCP on port %d%s"
+                (claude-code-ide-log "Claude Code %sstarted in %s with MCP on port %d%s"
+                                     (cond (continue "continued and ")
+                                           (resume "resumed and ")
+                                           (t ""))
                                      (file-name-nondirectory (directory-file-name working-dir))
                                      port
                                      (if claude-code-ide-cli-debug " (debug mode enabled)" ""))))
@@ -1079,7 +1096,25 @@ This function handles:
   "Run Claude Code in a terminal for the current project or directory.
 With prefix argument FORCE-DIR, use `default-directory' instead of project root."
   (interactive "P")
-  (claude-code-ide--start-session force-dir))
+  (claude-code-ide--start-session nil nil force-dir))
+
+;;;###autoload
+(defun claude-code-ide-resume (&optional force-dir)
+  "Resume Claude Code in a terminal for the current project or directory.
+This starts Claude with the -r (resume) flag to continue the previous
+conversation.  With prefix argument FORCE-DIR, use `default-directory'
+instead of project root."
+  (interactive "P")
+  (claude-code-ide--start-session nil t force-dir))
+
+;;;###autoload
+(defun claude-code-ide-continue (&optional force-dir)
+  "Continue the most recent Claude Code conversation in the current directory.
+This starts Claude with the -c (continue) flag to continue the most recent
+conversation in the current directory.  With prefix argument FORCE-DIR, use
+`default-directory' instead of project root."
+  (interactive "P")
+  (claude-code-ide--start-session t nil force-dir))
 
 ;;;###autoload
 (defun claude-code-ide-check-status ()
